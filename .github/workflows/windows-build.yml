@@ -12,18 +12,16 @@ jobs:
 
     steps:
       - name: Kodu Çek (Checkout)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Node.js Kurulumu (Uyarıyı çözmek için Node 22)
-        uses: actions/setup-node@v4
+      - name: Node.js Kurulumu
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
       - name: Rust Kurulumu
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
 
       - name: Rust Önbelleği (Derlemeyi hızlandırmak için)
         uses: swatinem/rust-cache@v2
@@ -31,7 +29,7 @@ jobs:
           workspaces: src-tauri -> target
 
       - name: Bağımlılıkları Yükle
-        run: npm install
+        run: npm ci
 
       - name: Tauri Uygulamasını Derle (Windows)
         uses: tauri-apps/tauri-action@v0
@@ -39,10 +37,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: .
-          args: --target x86_64-pc-windows-msvc
+          args: ''
+
+      - name: Kurulum Dosyalarını Doğrula
+        shell: pwsh
+        run: |
+          $bundleRoot = "src-tauri/target/release/bundle"
+          if (-not (Test-Path $bundleRoot)) {
+            Write-Error "Bundle klasörü bulunamadı: $bundleRoot"
+          }
+          Get-ChildItem -Path $bundleRoot -Recurse -Include *.exe,*.msi | ForEach-Object { $_.FullName }
 
       - name: Kurulum Dosyalarını Actions Sekmesine Yükle (Eserler/Artifacts)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: VB-Windows-Kurulum-Dosyalari
           if-no-files-found: error
